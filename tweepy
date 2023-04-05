@@ -1,0 +1,43 @@
+import tweepy
+import openai
+import os
+
+# Authenticate with Twitter API
+consumer_key = os.environ['CONSUMER_KEY']
+consumer_secret = os.environ['CONSUMER_SECRET']
+access_token = os.environ['ACCESS_TOKEN']
+access_token_secret = os.environ['ACCESS_TOKEN_SECRET']
+
+auth = tweepy.OAuthHandler(consumer_key, consumer_secret)
+auth.set_access_token(access_token, access_token_secret)
+
+api = tweepy.API(auth)
+
+# Authenticate with OpenAI API
+openai.api_key = os.environ['OPENAI_API_KEY']
+
+# Listen for new tweets
+class MyStreamListener(tweepy.StreamListener):
+    def on_status(self, status):
+        # Only respond to tweets that mention the bot
+        if '@twitwiz' in status.text:
+            # Get the text of the original tweet
+            tweet_text = status.text.replace('@twitwiz', '').strip()
+            
+            # Generate a response using ChatGPT
+            prompt = f"Please provide some context for the following tweet: '{tweet_text}'"
+            response = openai.Completion.create(engine="davinci", prompt=prompt, max_tokens=100)
+            
+            # Post the response as a reply to the original tweet
+            reply_text = f"Here is some context for your tweet '{tweet_text}': {response.choices[0].text}"
+            api.update_status(reply_text, in_reply_to_status_id=status.id)
+            
+myStreamListener = MyStreamListener()
+myStream = tweepy.Stream(auth = api.auth, listener=myStreamListener)
+
+myStream.filter(track=['@twitwiz'])
+export CONSUMER_KEY=your_consumer_key_here
+export CONSUMER_SECRET=your_consumer_secret_here
+export ACCESS_TOKEN=your_access_token_here
+export ACCESS_TOKEN_SECRET=your_access_token_secret_here
+export OPENAI_API_KEY=your_openai_api_key_here
